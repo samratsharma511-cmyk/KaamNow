@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Environment files and credentials
+.env
+.env.*
+.env.local
+server/.env
+client/.env
+!.env.example
+!server/.env.example
+!client/.env.example
+
+# Neon CLI
+.neon
+.neon/
+
+# Build artifacts
+dist/
+client/dist/
+build/
+
+# Logs & temp
+*.log
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/

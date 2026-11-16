@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  WORKER
+}
+
+enum BookingStatus {
+  SEARCHING
+  REQUESTED
+  ACCEPTED
+  ON_THE_WAY
+  ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_WORKER_FOUND
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  phone        String
+  passwordHash String
+  role         Role     @default(CUSTOMER)
+  avatarUrl    String?
+  address      String?
+  city         String?  @default("Bengaluru")
+  latitude     Float?
+  longitude    Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workerProfile         WorkerProfile?
+  customerBookings      Booking[]              @relation("CustomerBookings")
+  customerReviews       Review[]               @relation("CustomerReviews")
+  statusHistoryEntries  BookingStatusHistory[]
+
+  @@index([role])
+  @@index([email])
+}
+
+model WorkerProfile {
+  id                   Int      @id @default(autoincrement())
+  userId               Int      @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profession           String
+  bio                  String
+  experienceYears      Int      @default(1)
+  visitCharge          Float    @default(199)
+  serviceRadiusKm      Float    @default(15)
+  serviceArea          String   @default("Bengaluru")
+  skills               String[]
+  portfolioImages      String[]
+  availabilitySchedule String   @default("Mon - Sun: 8:00 AM - 8:00 PM")
+  isOnline             Boolean  @default(true)
+  isVerified           Boolean  @default(true)
+  averageRating        Float    @default(0)
+  totalReviews         Int      @default(0)
+  completedJobsCount   Int      @default(0)
+  totalEarnings        Float    @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  workerServices    WorkerService[]
+  assignedBookings  Booking[]       @relation("AssignedWorkerBookings")
+  candidateBookings Booking[]       @relation("CandidateWorkerBookings")
+  location          WorkerLocation?
+  reviews           Review[]
+
+  @@index([profession])
+  @@index([isOnline])
+  @@index([averageRating])
+  @@index([visitCharge])
+}
+
+model ServiceCategory {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  slug        String    @unique
+  description String
+  icon        String
+  imageUrl    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  services    Service[]
+}
+
+model Service {
+  id                  Int             @id @default(autoincrement())
+  categoryId          Int
+  category            ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name                String
+  slug                String          @unique
+  description         String
+  basePrice           Float
+  estimatedDuration   String          @default("45 - 60 mins")
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  workerServices      WorkerService[]
+  bookings            Booking[]
+
+  @@index([categoryId])
+  @@index([name])
+}
+
+model WorkerService {
+  id              Int           @id @default(autoincrement())
+  workerProfileId Int
+  workerProfile   WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  serviceId       Int
+  service         Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  customPrice     Float
+  createdAt       DateTime      @default(now())
+
+  @@unique([workerProfileId, serviceId])
+  @@index([serviceId])
+  @@index([workerProfileId])
+}
+
+model Booking {
+  id                       Int           @id @default(autoincrement())
+  bookingNumber            String        @unique
+  customerId               Int
+  customer                 User          @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
+  workerProfileId          Int?
+  workerProfile            WorkerProfile? @relation("AssignedWorkerBookings", fields: [workerProfileId], references: [id], onDelete: SetNull)
+  currentCandidateWorkerId Int?
+  currentCandidateWorker   WorkerProfile? @relation("CandidateWorkerBookings", fields: [currentCandidateWorkerId], references: [id], onDelete: SetNull)
+  rejectedWorkerIds        Int[]         @default([])
+  serviceId                Int
+  service                  Service       @relation(fields: [serviceId], references: [id])
+  status                   BookingStatus @default(SEARCHING)
+  problemDescription       String
+  problemPhotoUrl          String?
+  serviceAddress           String
+  latitude                 Float
+  longitude                Float
+  scheduledAt              DateTime
+  isImmediate              Boolean       @default(true)
+  visitCharge              Float
+  finalAmount              Float?
+  requestExpiresAt         DateTime?
+  acceptedAt               DateTime?
+  onTheWayAt               DateTime?
+  arrivedAt                DateTime?
+  startedAt                DateTime?
+  completedAt              DateTime?
+  cancelledAt              DateTime?
+  cancelReason             String?
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
+
+  statusHistory            BookingStatusHistory[]
+  review                   Review?
+
+  @@index([customerId])
+  @@index([workerProfileId])
+  @@index([currentCandidateWorkerId])
+  @@index([status])
+  @@index([serviceId])
+  @@index([latitude, longitude])
+}
+
+model BookingStatusHistory {
+  id              Int           @id @default(autoincrement())
+  bookingId       Int
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  status          BookingStatus
+  changedByUserId Int?
+  changedByUser   User?         @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+  note            String?
+  createdAt       DateTime      @default(now())
+
+  @@index([bookingId])
+}
+
+model WorkerLocation {
+  id              Int           @id @default(autoincrement())
+  workerProfileId Int           @unique
+  workerProfile   WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  latitude        Float
+  longitude       Float
+  heading         Float?
+  speed           Float?
+  updatedAt       DateTime      @updatedAt
+
+  @@index([latitude, longitude])
+}
+
+model Review {
+  id              Int           @id @default(autoincrement())
+  bookingId       Int           @unique
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customerId      Int
+  customer        User          @relation("CustomerReviews", fields: [customerId], references: [id], onDelete: Cascade)
+  workerProfileId Int
+  workerProfile   WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  rating          Int
+  comment         String?
+  createdAt       DateTime      @default(now())
+
+  @@index([workerProfileId])
+  @@index([customerId])
+}

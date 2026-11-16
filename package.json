@@ -1,0 +1,17 @@
+{
+  "name": "kaamnow-mvp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "KaamNow — Managed On-Demand Service Marketplace MVP",
+  "scripts": {
+    "install:all": "cd server && npm install && cd ../client && npm install",
+    "db:setup": "cd server && npx prisma generate && npx prisma db push && npm run prisma:seed",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build:client": "cd client && npm run build"
+  },
+  "dependencies": {
+    "@neon/config": "^1.14.0",
+    "@neon/env": "^2.1.3"
+  }
+}
